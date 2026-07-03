@@ -102,3 +102,103 @@ export const productiveResearchers = () => request(async () => {
   const response = await api.get('/reports/stats/productive-researchers')
   return Array.isArray(response.data) ? response.data : []
 })
+
+export const getChercheurs = () => request(async () => {
+  const response = await api.get('/oracle/chercheurs')
+  return Array.isArray(response.data) ? response.data : []
+})
+
+export const createChercheur = (data) => request(async () => {
+  const response = await api.post('/oracle/chercheurs', data)
+  return response.data
+})
+
+export const updateChercheur = (id, data) => request(async () => {
+  const response = await api.put(`/oracle/chercheurs/${id}`, data)
+  return response.data
+})
+
+export const deleteChercheur = (id) => request(async () => {
+  const response = await api.delete(`/oracle/chercheurs/${id}`)
+  return response.data
+})
+
+export const getProjets = () => request(async () => {
+  const response = await api.get('/oracle/projets')
+  return Array.isArray(response.data) ? response.data : []
+})
+
+export const createProjet = (data) => request(async () => {
+  const response = await api.post('/oracle/projets', data)
+  return response.data
+})
+
+export const updateProjet = (id, data) => request(async () => {
+  const response = await api.put(`/oracle/projets/${id}`, data)
+  return response.data
+})
+
+export const deleteProjet = (id) => request(async () => {
+  const response = await api.delete(`/oracle/projets/${id}`)
+  return response.data
+})
+
+export const getEquipements = () => request(async () => {
+  const response = await api.get('/oracle/equipements')
+  return Array.isArray(response.data) ? response.data : []
+})
+
+export const createEquipement = (data) => request(async () => {
+  const response = await api.post('/oracle/equipements', data)
+  return response.data
+})
+
+export const updateEquipement = (id, data) => request(async () => {
+  const response = await api.put(`/oracle/equipements/${id}`, data)
+  return response.data
+})
+
+export const deleteEquipement = (id) => request(async () => {
+  const response = await api.delete(`/oracle/equipements/${id}`)
+  return response.data
+})
+
+export const getAffectations = () => request(async () => {
+  const response = await api.get('/oracle/affectations')
+  return Array.isArray(response.data) ? response.data : []
+})
+
+export const createAffectation = (data) => request(async () => {
+  const response = await api.post('/oracle/affectations', data)
+  return response.data
+})
+
+export const deleteAffectation = (id) => request(async () => {
+  const response = await api.delete(`/oracle/affectations/${id}`)
+  return response.data
+})
+
+export const getReservations = () => request(async () => {
+  const response = await api.get('/oracle/reservations')
+  return Array.isArray(response.data) ? response.data : []
+})
+
+export const createReservation = (data) => request(async () => {
+  const response = await api.post('/oracle/reservations', data)
+  return response.data
+})
+
+export const deleteReservation = (id) => request(async () => {
+  const response = await api.delete(`/oracle/reservations/${id}`)
+  return response.data
+})
+
+export const getStatsProjetsActifs = () => request(async () => {
+  const response = await api.get('/oracle/stats/projets-actifs')
+  return Array.isArray(response.data) ? response.data : []
+})
+
+export const getStatsProjetsChercheurs = () => request(async () => {
+  const response = await api.get('/oracle/stats/projets-chercheurs')
+  return Array.isArray(response.data) ? response.data : []
+})

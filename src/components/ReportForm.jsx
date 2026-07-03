@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Alert, Button, Col, Form, Modal, Row } from 'react-bootstrap'
-import { projects } from '../data/oracleMockData'
 import { createReport, updateReport } from '../services/api'
 
 const emptyReport = {
@@ -11,13 +10,24 @@ const emptyReport = {
   observations: '',
   conclusion: '',
   projetId: '',
-  chercheurId: '1',
+  chercheurId: '',
   dateExperience: '',
   statut: 'brouillon'
 }
 
-const ReportForm = ({ show, onHide, initial, onSaved }) => {
-  const defaultProjectId = useMemo(() => String(projects[0]?.id || ''), [])
+const getResearcherName = (researcher) => {
+  if (!researcher) return ''
+  if (researcher.prenom || researcher.nom) return `${researcher.prenom || ''} ${researcher.nom || ''}`.trim()
+  return researcher.name || researcher.id || ''
+}
+
+const getProjectName = (project) => project.intitule || project.name || project.id
+
+const ReportForm = ({ show, onHide, initial, onSaved, currentResearcher, assignedProjects = [] }) => {
+  const researcherId = String(currentResearcher?.id || '')
+  const researcherName = getResearcherName(currentResearcher)
+  const defaultProjectId = useMemo(() => String(assignedProjects[0]?.id || ''), [assignedProjects])
+  const assignedProjectIds = useMemo(() => assignedProjects.map((project) => String(project.id)), [assignedProjects])
   const [form, setForm] = useState({ ...emptyReport, projetId: defaultProjectId })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -27,16 +37,16 @@ const ReportForm = ({ show, onHide, initial, onSaved }) => {
       setForm({
         ...emptyReport,
         ...initial,
-        projetId: String(initial.projetId || defaultProjectId),
-        chercheurId: String(initial.chercheurId || '1'),
+        projetId: assignedProjectIds.includes(String(initial.projetId)) ? String(initial.projetId) : defaultProjectId,
+        chercheurId: researcherId,
         dateExperience: initial.dateExperience ? String(initial.dateExperience).split('T')[0] : '',
         statut: initial.statut || 'brouillon'
       })
     } else {
-      setForm({ ...emptyReport, projetId: defaultProjectId })
+      setForm({ ...emptyReport, projetId: defaultProjectId, chercheurId: researcherId })
     }
     setError(null)
-  }, [initial, show, defaultProjectId])
+  }, [initial, show, defaultProjectId, researcherId, assignedProjectIds])
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -56,13 +66,29 @@ const ReportForm = ({ show, onHide, initial, onSaved }) => {
       return
     }
 
+    if (!form.projetId) {
+      setError('Veuillez sélectionner un projet affecté.')
+      return
+    }
+
+    if (!assignedProjectIds.includes(String(form.projetId))) {
+      setError('Le projet sélectionné doit être affecté au chercheur connecté.')
+      return
+    }
+
+    if (!researcherId) {
+      setError('Aucun chercheur connecté valide.')
+      return
+    }
+
     try {
       setSaving(true)
       setError(null)
+      // Le chercheur du rapport vient uniquement de l'utilisateur connecte.
       const payload = {
         ...form,
-        projetId: form.projetId || defaultProjectId,
-        chercheurId: form.chercheurId || '1',
+        projetId: form.projetId,
+        chercheurId: researcherId,
         statut: form.statut || 'brouillon'
       }
 
@@ -110,9 +136,10 @@ const ReportForm = ({ show, onHide, initial, onSaved }) => {
             <Col md={8}>
               <Form.Group className="mb-3">
                 <Form.Label>Projet</Form.Label>
-                <Form.Select name="projetId" value={form.projetId} onChange={handleChange}>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>{project.name}</option>
+                <Form.Select name="projetId" value={form.projetId} onChange={handleChange} required disabled={!assignedProjects.length}>
+                  <option value="">Sélectionner un projet</option>
+                  {assignedProjects.map((project) => (
+                    <option key={project.id} value={project.id}>{getProjectName(project)}</option>
                   ))}
                 </Form.Select>
               </Form.Group>
@@ -120,7 +147,8 @@ const ReportForm = ({ show, onHide, initial, onSaved }) => {
             <Col md={4}>
               <Form.Group className="mb-3">
                 <Form.Label>Chercheur</Form.Label>
-                <Form.Control name="chercheurId" value={form.chercheurId} onChange={handleChange} />
+                {/* Champ en lecture seule: aucun choix manuel d'un autre chercheur. */}
+                <Form.Control value={researcherName} readOnly plaintext={false} />
               </Form.Group>
             </Col>
           </Row>

@@ -49,7 +49,17 @@ const emptyForms = {
 
 const isValidated = (statut) => statut === 'valide' || statut === 'validé'
 
+const getStoredUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('rl_user') || 'null')
+  } catch (err) {
+    return null
+  }
+}
+
 const DirectorPage = () => {
+  const storedUser = useMemo(() => getStoredUser(), [])
+  const directorName = `${storedUser?.prenom || ''} ${storedUser?.nom || ''}`.trim() || 'Directeur'
   const [activeSection, setActiveSection] = useState('dashboard')
   const [reports, setReports] = useState([])
   const [statsStatus, setStatsStatus] = useState([])
@@ -520,6 +530,10 @@ const DirectorPage = () => {
 
   return (
     <AdminLayout title={sectionTitle} menuItems={sections} activeItem={activeSection} onSelectItem={setActiveSection}>
+      {/* Affichage de l'utilisateur connecte dans l'interface directeur. */}
+      <Alert variant="info" className="mb-3">
+        Directeur connecté : {directorName}
+      </Alert>
       {error && <Alert variant="danger" onClose={() => setError(null)} dismissible>{error}</Alert>}
       {success && <Alert variant="success" onClose={() => setSuccess(null)} dismissible>{success}</Alert>}
 

@@ -4,32 +4,59 @@ import { useNavigate } from 'react-router-dom'
 import MentorLayout from '../components/MentorLayout'
 
 const LoginPage = () => {
-  const [name, setName] = useState('')
-  const [role, setRole] = useState('chercheur')
+  const [form, setForm] = useState({
+    nom: '',
+    prenom: '',
+    email: '',
+    role: 'chercheur'
+  })
   const navigate = useNavigate()
+
+  const handleChange = (event) => {
+    const { name, value } = event.target
+    setForm((current) => ({ ...current, [name]: value }))
+  }
 
   const handleSubmit = (event) => {
     event.preventDefault()
-    const user = { name: name.trim() || 'Utilisateur', role }
+
+    // L'utilisateur connecte reste disponible dans toute l'application via localStorage.
+    const user = {
+      nom: form.nom.trim(),
+      prenom: form.prenom.trim(),
+      email: form.email.trim(),
+      role: form.role
+    }
+
     localStorage.setItem('rl_user', JSON.stringify(user))
-    navigate(role === 'chercheur' ? '/chercheur' : '/directeur')
+    navigate(user.role === 'chercheur' ? '/chercheur' : '/directeur')
   }
 
   return (
-    <MentorLayout title="Connexion" subtitle="Choisissez un rôle pour accéder à votre espace.">
+    <MentorLayout title="Connexion" subtitle="Renseignez vos informations pour accéder à votre espace.">
       <Card className="login-card mx-auto">
         <Card.Body>
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3">
               <Form.Label>Nom</Form.Label>
-              <Form.Control value={name} onChange={(event) => setName(event.target.value)} autoFocus />
+              <Form.Control name="nom" value={form.nom} onChange={handleChange} autoFocus required />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Prénom</Form.Label>
+              <Form.Control name="prenom" value={form.prenom} onChange={handleChange} required />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Email</Form.Label>
+              <Form.Control type="email" name="email" value={form.email} onChange={handleChange} required />
             </Form.Group>
 
             <Form.Group className="mb-4">
               <Form.Label>Rôle</Form.Label>
-              <Form.Select value={role} onChange={(event) => setRole(event.target.value)}>
+              <Form.Select name="role" value={form.role} onChange={handleChange}>
+                <option value="directeur">Directeur de labo</option>
                 <option value="chercheur">Chercheur</option>
-                <option value="directeur">Directeur de laboratoire</option>
               </Form.Select>
             </Form.Group>
 

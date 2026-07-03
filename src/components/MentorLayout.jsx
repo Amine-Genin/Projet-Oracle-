@@ -2,11 +2,18 @@ import React from 'react'
 import { Button, Container, Nav, Navbar } from 'react-bootstrap'
 import { NavLink, useNavigate } from 'react-router-dom'
 
+const getUserName = (user) => {
+  if (!user) return ''
+  return `${user.prenom || ''} ${user.nom || ''}`.trim() || user.name || ''
+}
+
 const MentorLayout = ({ children, title, subtitle }) => {
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('rl_user') || 'null')
+  const userName = getUserName(user)
 
   const handleLogout = () => {
+    // Deconnexion simple: suppression de la session locale puis retour au login.
     localStorage.removeItem('rl_user')
     navigate('/login')
   }
@@ -31,9 +38,12 @@ const MentorLayout = ({ children, title, subtitle }) => {
               <Nav.Link as={NavLink} to="/chercheur">Espace chercheur</Nav.Link>
               <Nav.Link as={NavLink} to="/directeur">Espace directeur</Nav.Link>
               {user ? (
-                <Button className="mentor-nav-button" variant="outline-light" size="sm" onClick={handleLogout}>
-                  Déconnexion
-                </Button>
+                <>
+                  <span className="text-white small">{userName}</span>
+                  <Button className="mentor-nav-button" variant="outline-light" size="sm" onClick={handleLogout}>
+                    Déconnexion
+                  </Button>
+                </>
               ) : (
                 <Button className="mentor-nav-button" variant="light" size="sm" onClick={() => navigate('/login')}>
                   Connexion

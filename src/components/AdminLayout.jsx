@@ -2,12 +2,19 @@ import React, { useState } from 'react'
 import { Button, Container, Nav } from 'react-bootstrap'
 import { NavLink, useNavigate } from 'react-router-dom'
 
+const getUserName = (user) => {
+  if (!user) return 'Directeur'
+  return `${user.prenom || ''} ${user.nom || ''}`.trim() || user.name || 'Directeur'
+}
+
 const AdminLayout = ({ children, title, menuItems = [], activeItem, onSelectItem }) => {
   const [collapsed, setCollapsed] = useState(false)
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('rl_user') || 'null')
+  const userName = getUserName(user)
 
   const handleLogout = () => {
+    // Deconnexion simple: suppression de la session locale puis retour au login.
     localStorage.removeItem('rl_user')
     navigate('/login')
   }
@@ -52,7 +59,7 @@ const AdminLayout = ({ children, title, menuItems = [], activeItem, onSelectItem
             <h1>{title || 'Tableau de bord'}</h1>
           </div>
           <div className="admin-user">
-            <span>{user?.name || 'Directeur'}</span>
+            <span>{userName}</span>
             <Button variant="outline-danger" size="sm" onClick={handleLogout}>
               Déconnexion
             </Button>

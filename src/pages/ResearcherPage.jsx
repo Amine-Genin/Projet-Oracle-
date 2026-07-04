@@ -2,11 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Row, Col, Button, Card, Alert, Spinner, Badge } from 'react-bootstrap'
 import MentorLayout from '../components/MentorLayout'
 import ReportForm from '../components/ReportForm'
-import {
-  affectations as fallbackAffectations,
-  projects as fallbackProjects,
-  researchers as fallbackResearchers
-} from '../data/oracleMockData'
 import { deleteReport, getAffectations, getChercheurs, getProjets, getReports, submitReport } from '../services/api'
 
 const getStoredUser = () => {
@@ -21,10 +16,10 @@ const normalize = (value) => String(value || '').trim().toLowerCase()
 
 const getResearcherName = (researcher) => {
   if (!researcher) return ''
-  return `${researcher.prenom || ''} ${researcher.nom || ''}`.trim() || researcher.name || researcher.email || ''
+  return `${researcher.prenom || ''} ${researcher.nom || ''}`.trim() || researcher.email || ''
 }
 
-const getProjectName = (project) => project?.intitule || project?.name || project?.id || ''
+const getProjectName = (project) => project?.intitule || project?.id || ''
 
 const isValidated = (statut) => statut === 'validé' || statut === 'valide' || statut === 'validÃ©'
 
@@ -32,9 +27,9 @@ const ResearcherPage = () => {
   const storedUser = useMemo(() => getStoredUser(), [])
 
   const [reports, setReports] = useState([])
-  const [chercheurs, setChercheurs] = useState(fallbackResearchers)
-  const [projets, setProjets] = useState(fallbackProjects)
-  const [affectations, setAffectations] = useState(fallbackAffectations)
+  const [chercheurs, setChercheurs] = useState([])
+  const [projets, setProjets] = useState([])
+  const [affectations, setAffectations] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -44,8 +39,6 @@ const ResearcherPage = () => {
   const currentResearcher = useMemo(() => {
     const matchedOracleResearcher = chercheurs.find((item) => normalize(item.email) === normalize(storedUser?.email))
 
-    // Le formulaire utilise l'utilisateur connecte; si Oracle ne le connait pas encore,
-    // son email sert d'identifiant stable pour les rapports.
     return matchedOracleResearcher || {
       id: storedUser?.email,
       nom: storedUser?.nom || '',
@@ -61,11 +54,7 @@ const ResearcherPage = () => {
       .filter((item) => String(item.chercheurId) === currentResearcherId)
       .map((item) => String(item.projetId))
 
-    if (assignedIds.length) {
-      return projets.filter((project) => assignedIds.includes(String(project.id)))
-    }
-
-    return projets.filter((project) => String(project.researcherId) === currentResearcherId)
+    return projets.filter((project) => assignedIds.includes(String(project.id)))
   }, [affectations, projets, currentResearcherId])
 
   const load = async () => {
@@ -73,24 +62,19 @@ const ResearcherPage = () => {
       setLoading(true)
       setError(null)
 
-      try {
-        const [chercheursData, projetsData, affectationsData] = await Promise.all([
-          getChercheurs(),
-          getProjets(),
-          getAffectations()
-        ])
+      const [chercheursData, projetsData, affectationsData, allReports] = await Promise.all([
+        getChercheurs(),
+        getProjets(),
+        getAffectations(),
+        getReports()
+      ])
 
-        if (chercheursData.length) setChercheurs(chercheursData)
-        if (projetsData.length) setProjets(projetsData)
-        if (affectationsData.length) setAffectations(affectationsData)
-      } catch (oracleErr) {
-        setError('Données Oracle simulées indisponibles, affichage avec les données locales.')
-      }
-
-      const allReports = await getReports()
+      setChercheurs(chercheursData)
+      setProjets(projetsData)
+      setAffectations(affectationsData)
       setReports(allReports)
     } catch (err) {
-      setError(err.response?.data?.message || err.message)
+      setError(err.message || 'Impossible de charger les données Oracle.')
     } finally {
       setLoading(false)
     }
@@ -119,7 +103,7 @@ const ResearcherPage = () => {
       load()
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
-      setError(err.response?.data?.message || err.message)
+      setError(err.message)
     }
   }
 
@@ -131,7 +115,7 @@ const ResearcherPage = () => {
       load()
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
-      setError(err.response?.data?.message || err.message)
+      setError(err.message)
     }
   }
 
@@ -149,6 +133,8 @@ const ResearcherPage = () => {
       default: return <Badge bg="light" text="dark">{statut}</Badge>
     }
   }
+
+  const isKnownResearcher = chercheurs.some((item) => normalize(item.email) === normalize(storedUser?.email))
 
   return (
     <MentorLayout title="Espace Chercheur" subtitle="Gérez vos projets et rapports d'expériences">
@@ -200,9 +186,16 @@ const ResearcherPage = () => {
         </Button>
       </div>
 
-      {!assignedProjects.length && (
+      {!loading && !isKnownResearcher && (
         <Alert variant="warning">
-          Aucun projet n'est affecté à ce chercheur.
+          Votre email n'est pas enregistré dans Oracle. Connectez-vous avec un chercheur existant
+          (ex. alice.dupont@laboratoire.test).
+        </Alert>
+      )}
+
+      {!loading && isKnownResearcher && !assignedProjects.length && (
+        <Alert variant="warning">
+          Aucun projet n'est affecté à ce chercheur dans Oracle.
         </Alert>
       )}
 

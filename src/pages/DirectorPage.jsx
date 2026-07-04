@@ -25,8 +25,7 @@ import {
   getReservations,
   createReservation,
   deleteReservation,
-  getStatsProjetsActifs,
-  getStatsProjetsChercheurs
+  getOracleDashboard
 } from '../services/api'
 
 const sections = [
@@ -72,63 +71,143 @@ const DirectorPage = () => {
   const [reservations, setReservations] = useState([])
   const [statsActifs, setStatsActifs] = useState([])
   const [statsProjetsChercheurs, setStatsProjetsChercheurs] = useState([])
+  const [oracleCounts, setOracleCounts] = useState({ chercheurs: 0, projets: 0, equipements: 0 })
   const [loading, setLoading] = useState(true)
+  const [sectionLoading, setSectionLoading] = useState(false)
+  const [reportsLoading, setReportsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [modal, setModal] = useState({ show: false, type: null, mode: 'create', data: {} })
 
   const loadReports = async () => {
-    const [allReports, statusStats, prodResearchers] = await Promise.all([
-      getReports(),
-      statsByStatus(),
-      productiveResearchers()
-    ])
-    setReports(allReports)
-    setStatsStatus(statusStats)
-    setProductive(prodResearchers)
+    setReportsLoading(true)
+    try {
+      const [allReports, statusStats, prodResearchers] = await Promise.all([
+        getReports(),
+        statsByStatus(),
+        productiveResearchers()
+      ])
+      setReports(allReports)
+      setStatsStatus(statusStats)
+      setProductive(prodResearchers)
+    } finally {
+      setReportsLoading(false)
+    }
   }
 
-  const loadOracle = async () => {
-    const [
-      chercheursData,
-      projetsData,
-      equipementsData,
-      affectationsData,
-      reservationsData,
-      actifsData,
-      projetsChercheursData
-    ] = await Promise.all([
-      getChercheurs(),
-      getProjets(),
-      getEquipements(),
-      getAffectations(),
-      getReservations(),
-      getStatsProjetsActifs(),
-      getStatsProjetsChercheurs()
-    ])
+  const loadOracleDashboard = async () => {
+    const data = await getOracleDashboard()
+    setOracleCounts(data.counts || { chercheurs: 0, projets: 0, equipements: 0 })
+    setStatsActifs(Array.isArray(data.statsActifs) ? data.statsActifs : [])
+    setStatsProjetsChercheurs(Array.isArray(data.statsProjetsChercheurs) ? data.statsProjetsChercheurs : [])
+  }
 
-    setChercheurs(chercheursData)
-    setProjets(projetsData)
-    setEquipements(equipementsData)
-    setAffectations(affectationsData)
-    setReservations(reservationsData)
-    setStatsActifs(actifsData)
-    setStatsProjetsChercheurs(projetsChercheursData)
+  const loadSectionData = async (section) => {
+    setSectionLoading(true)
+    try {
+      setError(null)
+
+      if (section === 'rapports') {
+        const tasks = []
+        if (!projets.length) tasks.push(getProjets().then(setProjets))
+        tasks.push(loadReports())
+        await Promise.all(tasks)
+        return
+      }
+
+      if (section === 'chercheurs') {
+        setChercheurs(await getChercheurs())
+        return
+      }
+
+      if (section === 'projets') {
+        setProjets(await getProjets())
+        return
+      }
+
+      if (section === 'equipements') {
+        setEquipements(await getEquipements())
+        return
+      }
+
+      if (section === 'affectations') {
+        const [chercheursData, projetsData, affectationsData] = await Promise.all([
+          getChercheurs(),
+          getProjets(),
+          getAffectations()
+        ])
+        setChercheurs(chercheursData)
+        setProjets(projetsData)
+        setAffectations(affectationsData)
+        return
+      }
+
+      if (section === 'reservations') {
+        const [equipementsData, projetsData, reservationsData] = await Promise.all([
+          getEquipements(),
+          getProjets(),
+          getReservations()
+        ])
+        setEquipements(equipementsData)
+        setProjets(projetsData)
+        setReservations(reservationsData)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSectionLoading(false)
+    }
+  }
+
+  const refreshAfterMutation = async (type) => {
+    await loadOracleDashboard()
+
+    if (type === 'chercheur') setChercheurs(await getChercheurs())
+    if (type === 'projet') setProjets(await getProjets())
+    if (type === 'equipement') setEquipements(await getEquipements())
+    if (type === 'affectation') {
+      const [chercheursData, projetsData, affectationsData] = await Promise.all([
+        getChercheurs(),
+        getProjets(),
+        getAffectations()
+      ])
+      setChercheurs(chercheursData)
+      setProjets(projetsData)
+      setAffectations(affectationsData)
+    }
+    if (type === 'reservation') {
+      const [equipementsData, projetsData, reservationsData] = await Promise.all([
+        getEquipements(),
+        getProjets(),
+        getReservations()
+      ])
+      setEquipements(equipementsData)
+      setProjets(projetsData)
+      setReservations(reservationsData)
+    }
   }
 
   const load = async () => {
     try {
       setLoading(true)
       setError(null)
-      await Promise.all([loadReports(), loadOracle()])
+      await loadOracleDashboard()
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
+
+    loadReports().catch((err) => setError(err.message))
   }
 
   useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    if (activeSection !== 'dashboard') {
+      loadSectionData(activeSection)
+    }
+  }, [activeSection])
 
   const showSuccess = (message) => {
     setSuccess(message)
@@ -176,31 +255,31 @@ const DirectorPage = () => {
 
       if (type === 'chercheur') {
         mode === 'edit' ? await updateChercheur(data.id, payload) : await createChercheur(payload)
-        await loadOracle()
+        await refreshAfterMutation('chercheur')
         showSuccess('Chercheur enregistré.')
       }
 
       if (type === 'projet') {
         mode === 'edit' ? await updateProjet(data.id, payload) : await createProjet(payload)
-        await loadOracle()
+        await refreshAfterMutation('projet')
         showSuccess('Projet enregistré.')
       }
 
       if (type === 'equipement') {
         mode === 'edit' ? await updateEquipement(data.id, payload) : await createEquipement(payload)
-        await loadOracle()
+        await refreshAfterMutation('equipement')
         showSuccess('Équipement enregistré.')
       }
 
       if (type === 'affectation') {
         await createAffectation(payload)
-        await loadOracle()
+        await refreshAfterMutation('affectation')
         showSuccess('Affectation créée.')
       }
 
       if (type === 'reservation') {
         await createReservation(payload)
-        await loadOracle()
+        await refreshAfterMutation('reservation')
         showSuccess('Réservation créée.')
       }
 
@@ -220,7 +299,7 @@ const DirectorPage = () => {
       if (type === 'equipement') await deleteEquipement(id)
       if (type === 'affectation') await deleteAffectation(id)
       if (type === 'reservation') await deleteReservation(id)
-      await loadOracle()
+      await refreshAfterMutation(type)
       showSuccess('Suppression effectuée.')
     } catch (err) {
       setError(err.message)
@@ -256,20 +335,20 @@ const DirectorPage = () => {
   }, [activeSection])
 
   const findChercheur = (id) => {
-    const chercheur = chercheurs.find((item) => item.id === id)
+    const chercheur = chercheurs.find((item) => String(item.id) === String(id))
     return chercheur ? `${chercheur.prenom} ${chercheur.nom}` : id
   }
 
-  const findProjet = (id) => projets.find((item) => item.id === id)?.intitule || id
-  const findEquipement = (id) => equipements.find((item) => item.id === id)?.designation || id
+  const findProjet = (id) => projets.find((item) => String(item.id) === String(id))?.intitule || id
+  const findEquipement = (id) => equipements.find((item) => String(item.id) === String(id))?.designation || id
 
   const renderDashboard = () => (
     <>
       <Row className="g-3 mb-4">
-        <Col md={3}><StatCard title="Chercheurs" value={chercheurs.length} label="Oracle simulé" color="primary" /></Col>
-        <Col md={3}><StatCard title="Projets" value={projets.length} label="Oracle simulé" color="info" /></Col>
-        <Col md={3}><StatCard title="Équipements" value={equipements.length} label="Oracle simulé" color="success" /></Col>
-        <Col md={3}><StatCard title="Rapports soumis" value={submittedReports} label="MongoDB" color="warning" /></Col>
+        <Col md={3}><StatCard title="Chercheurs" value={oracleCounts.chercheurs} label="Oracle" color="primary" /></Col>
+        <Col md={3}><StatCard title="Projets" value={oracleCounts.projets} label="Oracle" color="info" /></Col>
+        <Col md={3}><StatCard title="Équipements" value={oracleCounts.equipements} label="Oracle" color="success" /></Col>
+        <Col md={3}><StatCard title="Rapports soumis" value={reportsLoading ? '…' : submittedReports} label="MongoDB" color="warning" /></Col>
       </Row>
 
       <Row className="g-3 mb-4">
@@ -314,12 +393,14 @@ const DirectorPage = () => {
       </Row>
 
       <Row className="g-3">
-        <Col lg={4}><StatCard title="Rapports MongoDB" value={reports.length} label={`${progressRate}% validés`} color="primary" /></Col>
+        <Col lg={4}><StatCard title="Rapports MongoDB" value={reportsLoading ? '…' : reports.length} label={reportsLoading ? 'Chargement…' : `${progressRate}% validés`} color="primary" /></Col>
         <Col lg={4}>
           <Card className="admin-panel-card h-100">
             <Card.Header><h6 className="mb-0">Statuts des rapports</h6></Card.Header>
             <Card.Body>
-              {normalizedStatsStatus.map((item) => (
+              {reportsLoading ? (
+                <div className="text-center py-3"><Spinner animation="border" size="sm" /></div>
+              ) : normalizedStatsStatus.map((item) => (
                 <div key={item.statut} className="d-flex justify-content-between border-bottom py-2">
                   <span>{getStatutBadge(item.statut)}</span>
                   <Badge bg="primary">{item.count}</Badge>
@@ -332,7 +413,9 @@ const DirectorPage = () => {
           <Card className="admin-panel-card h-100">
             <Card.Header><h6 className="mb-0">Chercheurs productifs</h6></Card.Header>
             <Card.Body>
-              {productive.length ? productive.map((item) => (
+              {reportsLoading ? (
+                <div className="text-center py-3"><Spinner animation="border" size="sm" /></div>
+              ) : productive.length ? productive.map((item) => (
                 <div key={item._id} className="d-flex justify-content-between border-bottom py-2">
                   <span>Chercheur #{item._id}</span>
                   <Badge bg="success">{item.count}</Badge>
@@ -537,7 +620,7 @@ const DirectorPage = () => {
       {error && <Alert variant="danger" onClose={() => setError(null)} dismissible>{error}</Alert>}
       {success && <Alert variant="success" onClose={() => setSuccess(null)} dismissible>{success}</Alert>}
 
-      {loading ? (
+      {loading || sectionLoading ? (
         <div className="text-center py-5"><Spinner animation="border" /></div>
       ) : renderCurrentSection()}
 

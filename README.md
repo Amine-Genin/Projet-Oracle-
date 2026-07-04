@@ -178,7 +178,7 @@ MONGO_URI=your_mongodb_connection_string
 
 ORACLE_USER=lab_user
 ORACLE_PASSWORD=your_password
-ORACLE_CONNECT_STRING=localhost:1521/XE
+ORACLE_CONNECT_STRING=localhost:1521/oradb
 ```
 
 ---

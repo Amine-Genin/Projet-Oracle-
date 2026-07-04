@@ -8,7 +8,7 @@
   lorsqu'un equipement est affecte a un projet dont le statut est "en cours",
   l'etat de cet equipement devient automatiquement "en utilisation".
 */
-CREATE OR REPLACE TRIGGER trg_pe_equipement_en_utilisation
+CREATE OR REPLACE TRIGGER trg_pe_equip_use
 AFTER INSERT OR UPDATE OF id_projet, id_equipement
 ON projet_equipement
 FOR EACH ROW

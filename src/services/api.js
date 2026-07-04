@@ -103,6 +103,11 @@ export const productiveResearchers = () => request(async () => {
   return Array.isArray(response.data) ? response.data : []
 })
 
+export const getOracleDashboard = () => request(async () => {
+  const response = await api.get('/oracle/dashboard')
+  return response.data
+})
+
 export const getChercheurs = () => request(async () => {
   const response = await api.get('/oracle/chercheurs')
   return Array.isArray(response.data) ? response.data : []

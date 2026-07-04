@@ -1,16 +1,25 @@
-import React from 'react'
-import { Button, Card, Col, Row } from 'react-bootstrap'
+import React, { useEffect, useState } from 'react'
+import { Button, Card, Col, Row, Spinner } from 'react-bootstrap'
 import { useNavigate } from 'react-router-dom'
 import MentorLayout from '../components/MentorLayout'
-import { projects, researchers } from '../data/oracleMockData'
+import { getOracleDashboard } from '../services/api'
 
 const Home = () => {
   const navigate = useNavigate()
+  const [oracleCounts, setOracleCounts] = useState({ chercheurs: 0, projets: 0, equipements: 0 })
+  const [loadingOracle, setLoadingOracle] = useState(true)
+
+  useEffect(() => {
+    getOracleDashboard()
+      .then((data) => setOracleCounts(data.counts || { chercheurs: 0, projets: 0, equipements: 0 }))
+      .catch(() => setOracleCounts({ chercheurs: 0, projets: 0, equipements: 0 }))
+      .finally(() => setLoadingOracle(false))
+  }, [])
 
   return (
     <MentorLayout
       title="Gestion d'un Laboratoire de Recherche"
-      subtitle="Suivi des expériences, des projets Oracle simulés et des rapports MongoDB."
+      subtitle="Suivi des expériences, des projets Oracle et des rapports MongoDB."
     >
       <Row className="align-items-center g-4 mb-5 mentor-intro-section">
         <Col lg={7}>
@@ -71,7 +80,14 @@ const Home = () => {
             <Card.Body>
               <div className="service-icon">03</div>
               <h5>Référentiel Oracle</h5>
-              <p>{projects.length} projets et {researchers.length} chercheurs disponibles en données simulées.</p>
+              {loadingOracle ? (
+                <Spinner animation="border" size="sm" />
+              ) : (
+                <p>
+                  {oracleCounts.projets} projets, {oracleCounts.chercheurs} chercheurs et{' '}
+                  {oracleCounts.equipements} équipements disponibles dans la base Oracle.
+                </p>
+              )}
             </Card.Body>
           </Card>
         </Col>

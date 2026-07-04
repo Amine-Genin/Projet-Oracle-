@@ -1,3 +1,4 @@
+import '../utilPolyfill'
 import oracledb from 'oracledb'
 
 let pool: oracledb.Pool | null = null

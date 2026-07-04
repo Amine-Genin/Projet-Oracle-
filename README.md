@@ -235,7 +235,7 @@ statut
 ## Backend
 
 ```bash
-cd backend
+cd C:\Users\hp\Projet-Oracle\backend
 
 npm run dev
 ```
@@ -245,9 +245,10 @@ npm run dev
 ## Frontend
 
 ```bash
-cd frontend
+cd C:\Users\hp\Projet-Oracle-> 
 
-npm run dev
+npm install
+npm start
 ```
 
 ---
